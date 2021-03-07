@@ -1,0 +1,1 @@
+Edited joystick library to have two throttles. I think it is sliders array in HID descriptors. Don't know if it breaks accel, rudder etc, but they weren't working anyway
