@@ -20,29 +20,18 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_MULTI_AXIS,
 
 const int sizeOfDigitalInputs = 6; 
 const int sizeOfAnalogInputs = 8;
+//ports on board
 int digitalInputs[sizeOfDigitalInputs] = {0,1,21,15,16,14};
+//results of port readings
+int digitalValues[sizeOfDigitalInputs];
+int previousDigitalValues[sizeOfDigitalInputs];
+
+//ports on board
 int analogInputs[sizeOfAnalogInputs] = {  A0,A1,A2,A10,A9,A8,A7,A6};//NOTE, to read analog we need to use A prefix//20 and 21 can be used for digital
 
-int digitalOutputs[24];
-  //button 1 up is 2, down is 3
-  //2 is 4, 14
-  //3 is 1, 5
-  //4 is switch
-  //5 is switch
-  //6 is switch
-  //7 is 16,18
-  //8 is 6,7
-  //engine
-  //9 is 12
-  //bottom row
-  //10 is 11
-  //11 is 9
-  //12 is 10
-  //13 is 15
-  //14 is 13
-  //15 is 18
-  //16 is 17
-  int digitalOutputsOrganised[24] = {2,3,4,14,1,5,99,99,99,99,99,99,16,8,6,7,12,11,9,10,15,13,18,17};
+int registerValues[18];
+int previousRegisterValues[18];
+int registerInputsOrganised[18] = {2,3,4,14,1,5,16,8,6,7,12,11,9,10,15,13,18,17};
 
 
 //define where your pins are
@@ -58,8 +47,8 @@ byte switchVar1 = 72;  //01001000
 byte switchVar2 = 159; //10011111
 byte switchVar3 = 64; //10 //only using 2
 
-void setup() {
-
+void setup() 
+{
   //start serial
 
   Serial.begin(9600);
@@ -107,6 +96,16 @@ void SetInputs()
 void loop() 
 {
 
+  //we will detect when button states change, so make a copy of previous cycle
+  for(int i = 0; i < 18; i++)
+  {
+    previousRegisterValues[i] = registerValues[i];
+  }
+  for (int i = 0; i < 6; i++)
+  {
+    previousDigitalValues[i] = digitalValues[i];
+  }
+ 
  //Shift Registers collect input for many buttons
   ShiftRegisters();
 
@@ -120,6 +119,8 @@ void loop()
   //Toggle Switches after shift reg, we overwrite empty values
   ToggleSwitches();
 
+
+//Serial.println(previousregisterValues[registerValuesOrganised[6]]);
   //Debug();
 }
 
@@ -181,14 +182,30 @@ void ToggleSwitches()
 {
   //all switches not on shift registers, just in to micro pro board
    for (int i = 0; i < sizeOfDigitalInputs; i++)
-    {
+   {
+    //read button
       int v = 0;
       if (digitalRead(digitalInputs[i]) == LOW) 
       {   
         v = 1;
       }      
-    
-      Joystick.setButton(i + 6,v);    
+
+      //save to array
+      digitalValues[i] = v;
+      
+      //detect change and send pulse if true
+      int buttonInWindows = i + 6;
+      
+      if(previousDigitalValues[i] == 0 && digitalValues[i] == 1)
+      {
+        //Serial.println("pulse");
+        //send pulse
+        Joystick.setButton(buttonInWindows, 1 );    
+      }
+      else 
+      {
+        Joystick.setButton(buttonInWindows, 0 );    
+      }
     }
 }
 
@@ -268,46 +285,58 @@ void Dials()
 
 void ShiftRegisterArrayToJoystick()
 {
-  for(int i = 0; i < 24; i++)
+  for(int i = 0; i < 18; i++)
   {
-    if(i >= 6 && i < 12)
-      continue;
-    
-    int buttonInWindows = i;
-    int buttonOnBoard = digitalOutputsOrganised[i] - 1;
-    int buttonValue = !digitalOutputs[buttonOnBoard];  
-    if(buttonInWindows >= 17)
-      buttonValue = !buttonValue;
-      
-    Joystick.setButton(buttonInWindows,buttonValue);
-  }
-/*
-  Joystick.setButton(0,digitalOutputs[1] );
-  Joystick.setButton(1,digitalOutputs[2] );
-  Joystick.setButton(2,digitalOutputs[4-1] );
-  Joystick.setButton(3,digitalOutputs[14-1] );
-*/
 
- //button 1 up is 2, down is 3
-  //2 is 4, 14
-  //3 is 1, 5
-  //4 is switch
-  //5 is switch
-  //6 is switch
-  //7 is 16,18
-  //8 is 6,7
-  //engine
-  //9 is 12
-  //bottom row
-  //10 is 11
-  //11 is 9
-  //12 is 10
-  //13 is 15
-  //14 is 13
-  //15 is 18
-  //16 is 17
-  //int digitalOutputsOrganised[24] = {2,3,4,14,1,5,99,99,99,99,99,99,16,5,6,7,12,11,9,10,15,13,18,17};//changed
-  
+    int buttonOnBoard = registerInputsOrganised[i] - 1;
+    int buttonValue = !registerValues[buttonOnBoard];  
+    
+    if(i > 10)
+      buttonValue = !buttonValue;
+
+    if(i == 10)
+    {
+      //engine button
+      Joystick.setButton(i,buttonValue);
+      if(buttonValue == 1 )
+        Serial.println("Engine");
+    }    
+    //bottom toggles
+    else if(i > 10 )
+    {
+      //only send on change
+      if(  registerValues[buttonOnBoard] == 1 && previousRegisterValues[buttonOnBoard] == 0)
+      {
+        //turning on        
+        Serial.println("Changed 1 > 0");
+        Joystick.setButton(i,1);
+      }
+      else if(registerValues[buttonOnBoard] == 0 && previousRegisterValues[buttonOnBoard] == 1)
+      {
+        Serial.println("Changed 0 > 1");
+        //pulse from on to off
+        Joystick.setButton(i,1);
+      }
+      else
+      {
+        //off
+        Joystick.setButton(i,0);
+      }
+    }    
+    else
+    {
+      //all three way momentary
+      //only send pulse when pushing out, not coming back to 0
+      if(registerValues[buttonOnBoard] == 0 && previousRegisterValues[buttonOnBoard] == 1)
+      {
+        //pulse from on to off
+        //Serial.println("changed 3-way");
+        Joystick.setButton(i,1);
+      }
+      else
+        Joystick.setButton(i,0);
+    }
+  }
 }
 
 void ShiftRegistersToArray()
@@ -348,11 +377,11 @@ void ShiftRegistersToArray()
       if (switchVar & (1 << n) )
       {
         //place in correct array entry depending on where we are in the loop going through the bits/bytes
-          digitalOutputs[n  + a*8] = 0;  
+          registerValues[n  + a*8] = 0;  
       }
       else
       {      
-          digitalOutputs[n  + a*8] = 1;
+          registerValues[n  + a*8] = 1;
       }
     }
   }
