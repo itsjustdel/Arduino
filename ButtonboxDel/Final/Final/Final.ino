@@ -20,7 +20,7 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_MULTI_AXIS,
 
 const int sizeOfDigitalInputs = 6; 
 const int sizeOfAnalogInputs = 8;
-int digitalInputs[sizeOfDigitalInputs] = {0,1,21,15,16,14};//,3,2,1,5,7};
+int digitalInputs[sizeOfDigitalInputs] = {0,1,21,15,16,14};
 int analogInputs[sizeOfAnalogInputs] = {  A0,A1,A2,A10,A9,A8,A7,A6};//NOTE, to read analog we need to use A prefix//20 and 21 can be used for digital
 
 int digitalOutputs[24];
@@ -57,10 +57,6 @@ int clockPin = 2;
 byte switchVar1 = 72;  //01001000
 byte switchVar2 = 159; //10011111
 byte switchVar3 = 64; //10 //only using 2
-
-char note2sing[] = {
-
-  'C', 'd', 'e', 'f', 'g', 'a', 'b', 'c'};
 
 void setup() {
 
@@ -121,6 +117,9 @@ void loop()
   
   Dials();
 
+  //Toggle Switches after shift reg, we overwrite empty values
+  ToggleSwitches();
+
   //Debug();
 }
 
@@ -176,6 +175,21 @@ void Debug()
   Serial.println("-------------------");
   //delay so all these print satements can keep up.
   //delay(500);
+}
+
+void ToggleSwitches()
+{
+  //all switches not on shift registers, just in to micro pro board
+   for (int i = 0; i < sizeOfDigitalInputs; i++)
+    {
+      int v = 0;
+      if (digitalRead(digitalInputs[i]) == LOW) 
+      {   
+        v = 1;
+      }      
+    
+      Joystick.setButton(i + 6,v);    
+    }
 }
 
 void ShiftRegisters()
@@ -256,6 +270,9 @@ void ShiftRegisterArrayToJoystick()
 {
   for(int i = 0; i < 24; i++)
   {
+    if(i >= 6 && i < 12)
+      continue;
+    
     int buttonInWindows = i;
     int buttonOnBoard = digitalOutputsOrganised[i] - 1;
     int buttonValue = !digitalOutputs[buttonOnBoard];  
@@ -289,7 +306,7 @@ void ShiftRegisterArrayToJoystick()
   //14 is 13
   //15 is 18
   //16 is 17
-  //int digitalOutputsOrganised[24] = {2,3,4,14,1,5,99,99,99,99,99,99,16,5,6,7,12,11,9,10,15,13,18,17};
+  //int digitalOutputsOrganised[24] = {2,3,4,14,1,5,99,99,99,99,99,99,16,5,6,7,12,11,9,10,15,13,18,17};//changed
   
 }
 
