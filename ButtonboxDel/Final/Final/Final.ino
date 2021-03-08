@@ -47,6 +47,13 @@ byte switchVar1 = 72;  //01001000
 byte switchVar2 = 159; //10011111
 byte switchVar3 = 64; //10 //only using 2
 
+//timers
+
+unsigned long timers[24];
+int weights[24];
+const int pulseTime = 30;//10 ms pulses
+const int pulseTimeTrims = 100;//thanks il2
+
 void setup() 
 {
   //start serial
@@ -181,32 +188,51 @@ void Debug()
 void ToggleSwitches()
 {
   //all switches not on shift registers, just in to micro pro board
-   for (int i = 0; i < sizeOfDigitalInputs; i++)
-   {
+  for (int i = 0; i < sizeOfDigitalInputs; i++)
+  {
     //read button
-      int v = 0;
-      if (digitalRead(digitalInputs[i]) == LOW) 
-      {   
-        v = 1;
-      }      
+    int v = 0;
+    if (digitalRead(digitalInputs[i]) == LOW) 
+    {   
+      v = 1;
+    }      
+  
+    //save to array
+    digitalValues[i] = v;
+    
+    //detect change and send pulse if true
+    int buttonInWindows = i + 18;    
+    if(previousDigitalValues[i] == 0 && digitalValues[i] == 1)
+    {
+      //from off to on
+      //send pulse
+      Joystick.setButton(buttonInWindows, 1 );
+  
+      //start timer for this button
+      timers[buttonInWindows] = millis();
 
-      //save to array
-      digitalValues[i] = v;
-      
-      //detect change and send pulse if true
-      int buttonInWindows = i + 6;
-      
-      if(previousDigitalValues[i] == 0 && digitalValues[i] == 1)
+    }
+    else if(previousDigitalValues[i] == 1 && digitalValues[i] == 1)
+    {    
+      //if button held down
+      if(millis() - timers[buttonInWindows] >= pulseTime)
       {
+        //Serial.println(millis() - timers[buttonInWindows]);
         //Serial.println("pulse");
-        //send pulse
+        timers[buttonInWindows] = millis();       
+         
         Joystick.setButton(buttonInWindows, 1 );    
       }
-      else 
+      else
       {
-        Joystick.setButton(buttonInWindows, 0 );    
+       Joystick.setButton(buttonInWindows, 0 );   
       }
     }
+    else 
+    {
+      Joystick.setButton(buttonInWindows, 0 );    
+    }
+  }
 }
 
 void ShiftRegisters()
@@ -287,7 +313,6 @@ void ShiftRegisterArrayToJoystick()
 {
   for(int i = 0; i < 18; i++)
   {
-
     int buttonOnBoard = registerInputsOrganised[i] - 1;
     int buttonValue = !registerValues[buttonOnBoard];  
     
@@ -297,15 +322,11 @@ void ShiftRegisterArrayToJoystick()
     if(i == 10)
     {
       //only send on change
-      if(  registerValues[buttonOnBoard] == 1 && previousRegisterValues[buttonOnBoard] == 0)
+      if(registerValues[buttonOnBoard] == 0 && previousRegisterValues[buttonOnBoard] == 1)
       {
-        //turning on        
-        //Serial.println("Engine Changed 1 > 0");
-        Joystick.setButton(i,1);
-      }
-      else if(registerValues[buttonOnBoard] == 0 && previousRegisterValues[buttonOnBoard] == 1)
-      {
-       // Serial.println("Engine Changed 0 > 1");
+        //detect on change start timer
+        
+       // Serial.println(" Engine Changed 0 > 1 ");
         //pulse from on to off
         Joystick.setButton(i,1);
       }
@@ -321,13 +342,14 @@ void ShiftRegisterArrayToJoystick()
       //only send on change
       if(  registerValues[buttonOnBoard] == 1 && previousRegisterValues[buttonOnBoard] == 0)
       {
+      
         //turning on        
-       // Serial.println("Changed 1 > 0");
+       // Serial.println("Changed 1 > 0 ");
         Joystick.setButton(i,1);
       }
       else if(registerValues[buttonOnBoard] == 0 && previousRegisterValues[buttonOnBoard] == 1)
       {
-        //Serial.println("Changed 0 > 1");
+        //Serial.println("Changed 0 >  1");
         //pulse from on to off
         Joystick.setButton(i,1);
       }
@@ -343,12 +365,31 @@ void ShiftRegisterArrayToJoystick()
       //only send pulse when pushing out, not coming back to 0
       if(registerValues[buttonOnBoard] == 0 && previousRegisterValues[buttonOnBoard] == 1)
       {
+        //start timer for this button
+        timers[i] = millis();
+        
         //pulse from on to off
-        //Serial.println("changed 3-way");
+       // Serial.println("changed 3-way");
         Joystick.setButton(i,1);
       }
+      else if(previousRegisterValues[buttonOnBoard] == 0 && registerValues[buttonOnBoard] == 0)
+      {    
+        //if button held down
+        if(millis() - timers[i] >= pulseTimeTrims)
+        {
+          //Serial.println(millis() - timers[i]);
+          //Serial.println("pulse");
+          timers[i] = millis();       
+          
+          Joystick.setButton(i, 1 );
+        }
+        else
+        {
+         Joystick.setButton(i, 0 );   
+        }
+      }
       else
-        Joystick.setButton(i,0);
+        Joystick.setButton(i, 0 );
     }
   }
 }
@@ -435,7 +476,7 @@ byte shiftIn(int myDataPin, int myClockPin) {
 
     digitalWrite(myClockPin, 0);
 
-    delayMicroseconds(2);
+    //delayMicroseconds(2000);
 
     temp = digitalRead(myDataPin);
 
