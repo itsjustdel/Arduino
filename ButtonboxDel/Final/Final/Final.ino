@@ -296,10 +296,24 @@ void ShiftRegisterArrayToJoystick()
 
     if(i == 10)
     {
-      //engine button
-      Joystick.setButton(i,buttonValue);
-      if(buttonValue == 1 )
-        Serial.println("Engine");
+      //only send on change
+      if(  registerValues[buttonOnBoard] == 1 && previousRegisterValues[buttonOnBoard] == 0)
+      {
+        //turning on        
+        //Serial.println("Engine Changed 1 > 0");
+        Joystick.setButton(i,1);
+      }
+      else if(registerValues[buttonOnBoard] == 0 && previousRegisterValues[buttonOnBoard] == 1)
+      {
+       // Serial.println("Engine Changed 0 > 1");
+        //pulse from on to off
+        Joystick.setButton(i,1);
+      }
+      else
+      {
+        //off
+        Joystick.setButton(i,0);
+      }
     }    
     //bottom toggles
     else if(i > 10 )
@@ -308,12 +322,12 @@ void ShiftRegisterArrayToJoystick()
       if(  registerValues[buttonOnBoard] == 1 && previousRegisterValues[buttonOnBoard] == 0)
       {
         //turning on        
-        Serial.println("Changed 1 > 0");
+       // Serial.println("Changed 1 > 0");
         Joystick.setButton(i,1);
       }
       else if(registerValues[buttonOnBoard] == 0 && previousRegisterValues[buttonOnBoard] == 1)
       {
-        Serial.println("Changed 0 > 1");
+        //Serial.println("Changed 0 > 1");
         //pulse from on to off
         Joystick.setButton(i,1);
       }
