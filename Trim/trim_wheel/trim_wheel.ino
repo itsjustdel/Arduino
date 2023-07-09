@@ -3,7 +3,7 @@
 #define DT 7
 //#define SW 7
 
-int sensitivity = 2;
+int sensitivity = 4;
 int xPos;
 int yPos;
 int zPos;
@@ -24,11 +24,11 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_GAMEPAD,
 
 void setup() {
   // rotary
-  pinMode(4, INPUT_PULLUP);
   pinMode(7, INPUT_PULLUP);
+  pinMode(4, INPUT_PULLUP);
   // switch
-  pinMode(15, INPUT_PULLUP);
-  pinMode(16, INPUT_PULLUP);
+  pinMode(14, INPUT_PULLUP);
+  pinMode(10, INPUT_PULLUP);
 
   // Initialize Joystick Library
   Joystick.begin();
@@ -48,8 +48,8 @@ void loop() {
 }
 
 void switch3Way() {
-  int a = digitalRead(15);
-  int b = digitalRead(16);
+  int a = digitalRead(14);
+  int b = digitalRead(10);
 
   if (a == 1 && b == 1) {
     switchPos = 1;
@@ -110,9 +110,9 @@ void rotary() {
     // If the DT state is different than the CLK state then
     // the encoder is rotating CCW so decrement
     if (digitalRead(DT) != currentStateCLK) {
-      if (counter > -axisRange) {
+      if (counter > -axisRange) {        
         counter -= sensitivity;
-      }
+      }      
       setAxis(-1);
     } else {
       // Encoder is rotating CW so increment
@@ -120,5 +120,5 @@ void rotary() {
     }
   }
   // Remember last CLK state
-  lastStateCLK = currentStateCLK;
+  lastStateCLK = currentStateCLK;  
 }
