@@ -17,7 +17,7 @@ int digitalInputs[10] = {2,3,4,5,6,7,16,10,A0,A3};
 //15 - right
 //14 - up/jump
 
-int hatInputs[4] = {A1,A2,14,15};
+int hatInputs[4] = {A1,15,A2,14};
 int hatValues[4];
 void setup() {
   // Initialize Button Pins
